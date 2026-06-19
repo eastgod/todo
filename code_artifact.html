@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Premium Todo Planner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Noto Sans KR, Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti for Celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans KR', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 30px -10px rgba(0, 0, 0, 0.05)',
+                        'premium': '0 20px 40px -15px rgba(0, 0, 0, 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Custom scrollbar for beautiful dashboard lists */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        /* Glassmorphism custom classes */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen pb-12 transition-colors duration-300">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full"></div>
+
+    <!-- Main Container -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        
+        <!-- Top Navigation Bar -->
+        <header class="flex justify-between items-center mb-8 pb-6 border-b border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none">
+                    <i class="fa-solid fa-square-check text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">TaskFlow</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">당신의 하루를 스마트하게 설계하세요</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition" aria-label="테마 전환">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+                <!-- Quick Reset Stats Button -->
+                <button id="reset-app" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition" title="초기화">
+                    <i class="fa-solid fa-arrow-rotate-left"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Statistics Dashboard -->
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <!-- Summary Progress -->
+            <div class="glass-panel rounded-2xl p-5 shadow-soft flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-sm font-medium text-slate-500 dark:text-slate-400">오늘의 달성률</span>
+                        <span id="progress-percent" class="text-lg font-bold text-indigo-600 dark:text-indigo-400">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-600 h-full w-0 transition-all duration-500 ease-out"></div>
+                    </div>
+                </div>
+                <p id="progress-phrase" class="text-xs text-slate-400 dark:text-slate-400 mt-3 italic">"시작이 반입니다!"</p>
+            </div>
+
+            <!-- Active Tasks -->
+            <div class="glass-panel rounded-2xl p-5 shadow-soft flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 dark:text-slate-400 block font-medium">진행 중인 작업</span>
+                    <span id="stat-active" class="text-2xl font-bold text-slate-800 dark:text-white">0</span>
+                    <span class="text-xs text-slate-400 dark:text-slate-400 ml-1">개</span>
+                </div>
+            </div>
+
+            <!-- Completed Tasks -->
+            <div class="glass-panel rounded-2xl p-5 shadow-soft flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 dark:text-slate-400 block font-medium">완료한 작업</span>
+                    <span id="stat-completed" class="text-2xl font-bold text-slate-800 dark:text-white">0</span>
+                    <span class="text-xs text-slate-400 dark:text-slate-400 ml-1">개</span>
+                </div>
+            </div>
+
+            <!-- High Priority Tasks -->
+            <div class="glass-panel rounded-2xl p-5 shadow-soft flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 dark:text-slate-400 block font-medium">우선순위 높음</span>
+                    <span id="stat-high-priority" class="text-2xl font-bold text-slate-800 dark:text-white">0</span>
+                    <span class="text-xs text-slate-400 dark:text-slate-400 ml-1">개</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Layout Split -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Side: Task Creation and Category Settings -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- Task Creator Card -->
+                <div class="glass-panel rounded-2xl p-6 shadow-premium">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-plus text-indigo-500"></i> 새 작업 추가
+                    </h2>
+                    
+                    <form id="todo-form" class="space-y-4" onsubmit="event.preventDefault();">
+                        <!-- Task Title Input -->
+                        <div>
+                            <label for="todo-input" class="block text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider mb-2">할 일 내용</label>
+                            <input type="text" id="todo-input" placeholder="무엇을 완료해야 하나요?" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" required>
+                        </div>
+
+                        <!-- Grid for Category & Priority -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Category Select -->
+                            <div>
+                                <label for="category-select" class="block text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider mb-2">카테고리</label>
+                                <select id="category-select" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm">
+                                    <option value="💡 일상">💡 일상</option>
+                                    <option value="💼 업무">💼 업무</option>
+                                    <option value="📚 학습">📚 학습</option>
+                                    <option value="🛒 쇼핑">🛒 쇼핑</option>
+                                    <option value="🏃 건강">🏃 건강</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Priority Select -->
+                            <div>
+                                <label for="priority-select" class="block text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider mb-2">우선순위</label>
+                                <select id="priority-select" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm">
+                                    <option value="low">🟡 보통</option>
+                                    <option value="medium">🟠 중요</option>
+                                    <option value="high">🔴 긴급</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Due Date Pick -->
+                        <div>
+                            <label for="date-input" class="block text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider mb-2">마감일</label>
+                            <div class="relative">
+                                <input type="date" id="date-input" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" id="add-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold shadow-md shadow-indigo-100 dark:shadow-none hover:shadow-lg transition flex items-center justify-center gap-2 text-sm mt-2">
+                            <i class="fa-solid fa-plus"></i> 작업 추가하기
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Fast Filter Quickstats / Category management -->
+                <div class="glass-panel rounded-2xl p-6 shadow-premium">
+                    <h3 class="text-sm font-bold mb-3 text-slate-400 dark:text-slate-400 uppercase tracking-wider">나만의 맞춤 카테고리 관리</h3>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="new-category-input" placeholder="예: ✈️ 여행" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs">
+                            <button id="add-category-btn" class="px-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition whitespace-nowrap">
+                                추가
+                            </button>
+                        </div>
+                        <div id="category-badge-list" class="flex flex-wrap gap-1.5 pt-1">
+                            <!-- JS loaded dynamic categories with delete badges -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Tasks Lists -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Filter bar & Search bar -->
+                <div class="glass-panel rounded-2xl p-4 shadow-soft flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <!-- Tab-style Category/State Filter -->
+                    <div class="flex flex-wrap gap-1.5 w-full md:w-auto">
+                        <button data-filter="all" class="filter-tab px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-500 text-white shadow-sm transition">전체</button>
+                        <button data-filter="active" class="filter-tab px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">진행 중</button>
+                        <button data-filter="completed" class="filter-tab px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">완료됨</button>
+                        <button data-filter="high" class="filter-tab px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">긴급</button>
+                    </div>
+
+                    <!-- Search Input Box -->
+                    <div class="relative w-full md:w-64">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" id="search-input" placeholder="작업 이름 검색..." class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    </div>
+                </div>
+
+                <!-- Tasks Listing Area -->
+                <div id="todo-list" class="space-y-3">
+                    <!-- Render dynamic todo cards here -->
+                </div>
+
+                <!-- Empty State View -->
+                <div id="empty-state" class="hidden flex-col items-center justify-center py-16 text-center">
+                    <div class="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-600 mb-4 animate-bounce">
+                        <i class="fa-regular fa-folder-open text-3xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-700 dark:text-slate-300">표시할 작업이 없습니다</h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">새로운 목표를 세우거나 검색 필터를 변경해 보세요!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Todo Subtask Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-premium transform scale-95 transition-transform duration-300 flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-start pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span id="modal-category" class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium"></span>
+                    <span id="modal-priority" class="px-2 py-1 rounded-lg text-xs font-semibold"></span>
+                </div>
+                <button id="close-modal-btn" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="overflow-y-auto flex-1 py-4 space-y-5">
+                <div>
+                    <h3 id="modal-title" class="text-xl font-bold text-slate-800 dark:text-white mb-2"></h3>
+                    <div class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <i class="fa-regular fa-calendar-days"></i>
+                        <span id="modal-due"></span>
+                    </div>
+                </div>
+
+                <!-- Subtasks Section -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex justify-between">
+                        <span>세부 체크리스트 (<span id="modal-subtask-percent">0%</span>)</span>
+                    </h4>
+                    <!-- Subtask Creator Input -->
+                    <div class="flex gap-2">
+                        <input type="text" id="subtask-input" placeholder="세부적인 하위 작업을 추가해 보세요..." class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs">
+                        <button id="add-subtask-btn" class="px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-xs transition whitespace-nowrap">
+                            추가
+                        </button>
+                    </div>
+                    
+                    <!-- Subtask list -->
+                    <div id="subtask-list" class="space-y-1 max-h-48 overflow-y-auto pr-1">
+                        <!-- Dynamic subtasks -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                <button id="modal-complete-btn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs transition">
+                    작업 완료 처리
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Core Application State & Defaults ---
+        let todos = JSON.parse(localStorage.getItem('taskflow_todos')) || [
+            { id: 1, text: '💡 TaskFlow 앱 기능 투어하기', category: '💡 일상', priority: 'medium', dueDate: new Date().toISOString().split('T')[0], completed: false, subtasks: [{id: 101, text: '하위 체크리스트 만들어보기', completed: false}, {id: 102, text: '긴급도/우선순위 변경해보기', completed: true}] },
+            { id: 2, text: '🏃 하루 30분 걷기 및 스트레칭', category: '🏃 건강', priority: 'low', dueDate: new Date().toISOString().split('T')[0], completed: true, subtasks: [] },
+            { id: 3, text: '💼 디자인 레이아웃 완벽 검수하기', category: '💼 업무', priority: 'high', dueDate: '', completed: false, subtasks: [] }
+        ];
+
+        let categories = JSON.parse(localStorage.getItem('taskflow_categories')) || ['💡 일상', '💼 업무', '📚 학습', '🛒 쇼핑', '🏃 건강'];
+        let currentFilter = 'all';
+        let currentSearchQuery = '';
+        let activeModalTodoId = null;
+
+        // --- Custom DOM Selection Helpers ---
+        const $ = selector => document.querySelector(selector);
+        const $$ = selector => document.querySelectorAll(selector);
+
+        // --- Toast System ---
+        function showToast(message, type = 'success') {
+            const container = $('#toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-emerald-500';
+            let iconClass = 'fa-circle-check';
+            if (type === 'error') {
+                bgClass = 'bg-rose-500';
+                iconClass = 'fa-circle-exclamation';
+            } else if (type === 'info') {
+                bgClass = 'bg-blue-500';
+                iconClass = 'fa-circle-info';
+            }
+
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-2xl text-white shadow-premium ${bgClass} transform translate-y-2 opacity-0 transition-all duration-300 text-sm`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass}"></i>
+                <span class="font-medium">${message}</span>
+            `;
+
+            container.appendChild(toast);
+            
+            // Animate In
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            // Animate Out & Destroy
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // --- Confetti Trigger (Canvas-Confetti) ---
+        function triggerConfetti() {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#6366f1', '#a855f7', '#10b981', '#f59e0b']
+            });
+        }
+
+        // --- State Updaters ---
+        function saveState() {
+            localStorage.setItem('taskflow_todos', JSON.stringify(todos));
+            localStorage.setItem('taskflow_categories', JSON.stringify(categories));
+            updateDashboard();
+        }
+
+        // --- Theme Manager ---
+        function initTheme() {
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedTheme = localStorage.getItem('taskflow_theme');
+            
+            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+                document.documentElement.classList.add('dark');
+                $('#theme-icon').className = 'fa-solid fa-sun';
+            } else {
+                document.documentElement.classList.remove('dark');
+                $('#theme-icon').className = 'fa-solid fa-moon';
+            }
+        }
+
+        $('#theme-toggle').addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('taskflow_theme', isDark ? 'dark' : 'light');
+            $('#theme-icon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            showToast(isDark ? '다크 모드로 전환되었습니다.' : '라이트 모드로 전환되었습니다.', 'info');
+        });
+
+        // --- Dashboard Counters & Progress update ---
+        function updateDashboard() {
+            const total = todos.length;
+            const completed = todos.filter(t => t.completed).length;
+            const active = total - completed;
+            const highPriority = todos.filter(t => t.priority === 'high' && !t.completed).length;
+
+            $('#stat-active').textContent = active;
+            $('#stat-completed').textContent = completed;
+            $('#stat-high-priority').textContent = highPriority;
+
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            $('#progress-percent').textContent = `${percentage}%`;
+            $('#progress-bar').style.width = `${percentage}%`;
+
+            // Smart phrases based on completion rate
+            const phrases = [
+                "\"오늘의 첫 작업을 시작해 볼까요?\"",
+                "\"훌륭한 시작입니다. 한 걸음씩 앞으로!\"",
+                "\"절반 이상 달성! 집중력이 최고조입니다.\"",
+                "\"거의 다 끝났습니다! 조금만 더 힘내세요.\"",
+                "\"오늘의 완벽한 플래너! 모든 작업을 클리어하셨습니다! 🎉\""
+            ];
+            let index = 0;
+            if (percentage === 100) index = 4;
+            else if (percentage >= 75) index = 3;
+            else if (percentage >= 50) index = 2;
+            else if (percentage > 0) index = 1;
+            
+            $('#progress-phrase').textContent = phrases[index];
+        }
+
+        // --- Task CRUD & Helpers ---
+        function createTodo(text, category, priority, dueDate) {
+            const newTodo = {
+                id: Date.now(),
+                text: text,
+                category: category || '💡 일상',
+                priority: priority || 'low',
+                dueDate: dueDate || '',
+                completed: false,
+                subtasks: []
+            };
+            todos.unshift(newTodo);
+            saveState();
+            renderTodos();
+            showToast('새로운 작업이 성공적으로 추가되었습니다.');
+        }
+
+        function toggleTodoStatus(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                if (todo.completed) {
+                    triggerConfetti();
+                    showToast('🎉 작업을 완료했습니다! 수고하셨어요.');
+                } else {
+                    showToast('작업을 다시 진행 중 상태로 변경했습니다.', 'info');
+                }
+                saveState();
+                renderTodos();
+            }
+        }
+
+        function deleteTodo(id) {
+            todos = todos.filter(t => t.id !== id);
+            saveState();
+            renderTodos();
+            showToast('작업이 삭제되었습니다.', 'info');
+        }
+
+        // --- Dropdown options population ---
+        function updateCategoryDropdowns() {
+            const select = $('#category-select');
+            const savedValue = select.value;
+            select.innerHTML = '';
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
+            if (categories.includes(savedValue)) {
+                select.value = savedValue;
+            }
+        }
+
+        function renderCategoriesBadgeList() {
+            const list = $('#category-badge-list');
+            list.innerHTML = '';
+            categories.forEach(cat => {
+                const badge = document.createElement('div');
+                badge.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50';
+                badge.innerHTML = `
+                    <span>${cat}</span>
+                    <button onclick="removeCategory('${cat}')" class="text-slate-400 hover:text-rose-500 transition">
+                        <i class="fa-solid fa-circle-xmark text-[10px]"></i>
+                    </button>
+                `;
+                list.appendChild(badge);
+            });
+        }
+
+        window.removeCategory = function(cat) {
+            if (categories.length <= 1) {
+                showToast('적어도 하나 이상의 카테고리가 있어야 합니다.', 'error');
+                return;
+            }
+            categories = categories.filter(c => c !== cat);
+            saveState();
+            updateCategoryDropdowns();
+            renderCategoriesBadgeList();
+            showToast(`카테고리 '${cat}'가 제거되었습니다.`, 'info');
+        };
+
+        // --- Render Todo List View ---
+        function renderTodos() {
+            const listContainer = $('#todo-list');
+            const emptyState = $('#empty-state');
+            listContainer.innerHTML = '';
+
+            // Filtering logical process
+            let filteredTodos = todos;
+
+            // Search Filter
+            if (currentSearchQuery.trim() !== '') {
+                filteredTodos = filteredTodos.filter(t => t.text.toLowerCase().includes(currentSearchQuery.toLowerCase()));
+            }
+
+            // Tabs Filters
+            if (currentFilter === 'active') {
+                filteredTodos = filteredTodos.filter(t => !t.completed);
+            } else if (currentFilter === 'completed') {
+                filteredTodos = filteredTodos.filter(t => t.completed);
+            } else if (currentFilter === 'high') {
+                filteredTodos = filteredTodos.filter(t => t.priority === 'high' && !t.completed);
+            }
+
+            if (filteredTodos.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            } else {
+                emptyState.classList.remove('flex');
+                emptyState.classList.add('hidden');
+            }
+
+            filteredTodos.forEach(todo => {
+                const card = document.createElement('div');
+                
+                // Priority color badges
+                let priorityText = '보통';
+                let priorityClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+                if (todo.priority === 'high') {
+                    priorityText = '긴급';
+                    priorityClass = 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400';
+                } else if (todo.priority === 'medium') {
+                    priorityText = '중요';
+                    priorityClass = 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400';
+                }
+
+                // Subtask mini-indicator
+                const totalSubs = todo.subtasks ? todo.subtasks.length : 0;
+                const completedSubs = todo.subtasks ? todo.subtasks.filter(s => s.completed).length : 0;
+                const subIndicatorHTML = totalSubs > 0 
+                    ? `<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                         <i class="fa-solid fa-list-check"></i> ${completedSubs}/${totalSubs}
+                       </span>` 
+                    : '';
+
+                // Date status
+                let dateBadgeHTML = '';
+                if (todo.dueDate) {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const isOverdue = todo.dueDate < todayStr && !todo.completed;
+                    const dateClass = isOverdue 
+                        ? 'text-rose-500 font-semibold' 
+                        : 'text-slate-400 dark:text-slate-500';
+                    const iconClass = isOverdue ? 'fa-solid fa-triangle-exclamation animate-pulse' : 'fa-regular fa-calendar-days';
+                    
+                    dateBadgeHTML = `
+                        <div class="flex items-center gap-1.5 text-xs ${dateClass}">
+                            <i class="${iconClass}"></i>
+                            <span>${todo.dueDate} ${isOverdue ? '(만료)' : ''}</span>
+                        </div>
+                    `;
+                }
+
+                card.className = `group glass-panel rounded-2xl p-4 shadow-soft transition-all duration-300 hover:shadow-premium flex items-start justify-between gap-3 border-l-4 ${todo.completed ? 'opacity-65 border-slate-300 dark:border-slate-700' : 'border-indigo-500'}`;
+                
+                card.innerHTML = `
+                    <div class="flex items-start gap-3.5 flex-1 min-w-0">
+                        <!-- Custom Custom Checkbox -->
+                        <button onclick="toggleTodoStatus(${todo.id})" class="mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition shrink-0 ${todo.completed ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-400 text-transparent hover:text-indigo-200'}" aria-label="완료 체크">
+                            <i class="fa-solid fa-check text-sm"></i>
+                        </button>
+                        
+                        <div class="space-y-1.5 flex-1 min-w-0">
+                            <!-- Title & Priority Badge Row -->
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-xs px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium">${todo.category}</span>
+                                <span class="text-[11px] px-1.5 py-0.5 rounded-lg font-semibold ${priorityClass}">${priorityText}</span>
+                                ${subIndicatorHTML}
+                            </div>
+                            
+                            <!-- Task string text -->
+                            <p class="text-sm font-semibold text-slate-800 dark:text-white truncate ${todo.completed ? 'line-through text-slate-400 dark:text-slate-500' : ''}">
+                                ${todo.text}
+                            </p>
+
+                            <!-- Date section -->
+                            ${dateBadgeHTML}
+                        </div>
+                    </div>
+
+                    <!-- Action buttons (Details / Delete) -->
+                    <div class="flex items-center gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button onclick="openTodoDetail(${todo.id})" class="p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="상세 정보">
+                            <i class="fa-solid fa-arrows-to-eye"></i>
+                        </button>
+                        <button onclick="deleteTodo(${todo.id})" class="p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition" title="삭제">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+
+                listContainer.appendChild(card);
+            });
+        }
+
+        // --- Details Subtask Modal logic ---
+        window.openTodoDetail = function(id) {
+            const todo = todos.find(t => t.id === id);
+            if (!todo) return;
+
+            activeModalTodoId = id;
+            
+            $('#modal-title').textContent = todo.text;
+            $('#modal-category').textContent = todo.category;
+            
+            // Priority styling in modal
+            const priorityBadge = $('#modal-priority');
+            priorityBadge.className = 'px-2 py-1 rounded-lg text-xs font-semibold';
+            if (todo.priority === 'high') {
+                priorityBadge.textContent = '🔴 긴급';
+                priorityBadge.classList.add('bg-rose-50', 'text-rose-600', 'dark:bg-rose-950/40', 'dark:text-rose-400');
+            } else if (todo.priority === 'medium') {
+                priorityBadge.textContent = '🟠 중요';
+                priorityBadge.classList.add('bg-amber-50', 'text-amber-600', 'dark:bg-amber-950/40', 'dark:text-amber-400');
+            } else {
+                priorityBadge.textContent = '🟡 보통';
+                priorityBadge.classList.add('bg-slate-100', 'text-slate-600', 'dark:bg-slate-800', 'dark:text-slate-300');
+            }
+
+            $('#modal-due').textContent = todo.dueDate ? `${todo.dueDate} 마감` : '기한 제한 없음';
+
+            // Complete button status toggle
+            const completeBtn = $('#modal-complete-btn');
+            if (todo.completed) {
+                completeBtn.textContent = '작업 진행 중으로 복구';
+                completeBtn.className = 'px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition';
+            } else {
+                completeBtn.textContent = '작업 완료 처리';
+                completeBtn.className = 'px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs transition';
+            }
+
+            renderSubtasks(todo);
+
+            const modal = $('#detail-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 50);
+        };
+
+        function closeDetailModal() {
+            const modal = $('#detail-modal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                activeModalTodoId = null;
+            }, 300);
+        }
+
+        $('#close-modal-btn').addEventListener('click', closeDetailModal);
+        
+        // Close modal when backdrop clicked
+        $('#detail-modal').addEventListener('click', (e) => {
+            if (e.target === $('#detail-modal')) {
+                closeDetailModal();
+            }
+        });
+
+        $('#modal-complete-btn').addEventListener('click', () => {
+            if (activeModalTodoId) {
+                toggleTodoStatus(activeModalTodoId);
+                closeDetailModal();
+            }
+        });
+
+        // --- Subtask Management inside Modal ---
+        function renderSubtasks(todo) {
+            const container = $('#subtask-list');
+            container.innerHTML = '';
+            
+            const subtasks = todo.subtasks || [];
+            
+            if (subtasks.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 italic py-3 text-center">등록된 세부 작업이 없습니다.</p>`;
+                $('#modal-subtask-percent').textContent = '0%';
+                return;
+            }
+
+            const total = subtasks.length;
+            const completed = subtasks.filter(s => s.completed).length;
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            $('#modal-subtask-percent').textContent = `${percentage}%`;
+
+            subtasks.forEach(sub => {
+                const subRow = document.createElement('div');
+                subRow.className = 'flex items-center justify-between gap-2 py-1.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition';
+                
+                subRow.innerHTML = `
+                    <div class="flex items-center gap-2 min-w-0">
+                        <button onclick="toggleSubtaskStatus(${todo.id}, ${sub.id})" class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition ${sub.completed ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-slate-600'}" aria-label="세부 작업 체크">
+                            <i class="fa-solid fa-check text-[10px]"></i>
+                        </button>
+                        <span class="text-xs text-slate-700 dark:text-slate-300 truncate ${sub.completed ? 'line-through text-slate-400 dark:text-slate-500' : ''}">${sub.text}</span>
+                    </div>
+                    <button onclick="deleteSubtask(${todo.id}, ${sub.id})" class="text-slate-400 hover:text-rose-500 transition px-1" title="세부 작업 삭제">
+                        <i class="fa-regular fa-trash-can text-[11px]"></i>
+                    </button>
+                `;
+                container.appendChild(subRow);
+            });
+        }
+
+        window.toggleSubtaskStatus = function(todoId, subId) {
+            const todo = todos.find(t => t.id === todoId);
+            if (todo && todo.subtasks) {
+                const sub = todo.subtasks.find(s => s.id === subId);
+                if (sub) {
+                    sub.completed = !sub.completed;
+                    saveState();
+                    renderSubtasks(todo);
+                    renderTodos();
+                }
+            }
+        };
+
+        window.deleteSubtask = function(todoId, subId) {
+            const todo = todos.find(t => t.id === todoId);
+            if (todo && todo.subtasks) {
+                todo.subtasks = todo.subtasks.filter(s => s.id !== subId);
+                saveState();
+                renderSubtasks(todo);
+                renderTodos();
+                showToast('세부 작업이 삭제되었습니다.', 'info');
+            }
+        };
+
+        $('#add-subtask-btn').addEventListener('click', () => {
+            const textInput = $('#subtask-input');
+            const val = textInput.value.trim();
+            if (!val || !activeModalTodoId) return;
+
+            const todo = todos.find(t => t.id === activeModalTodoId);
+            if (todo) {
+                if (!todo.subtasks) todo.subtasks = [];
+                todo.subtasks.push({
+                    id: Date.now(),
+                    text: val,
+                    completed: false
+                });
+                textInput.value = '';
+                saveState();
+                renderSubtasks(todo);
+                renderTodos();
+                showToast('세부 작업을 추가했습니다.');
+            }
+        });
+
+        $('#subtask-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                $('#add-subtask-btn').click();
+            }
+        });
+
+        // --- Custom Category Add Function ---
+        $('#add-category-btn').addEventListener('click', () => {
+            const input = $('#new-category-input');
+            const val = input.value.trim();
+            
+            if (!val) {
+                showToast('카테고리 이름을 입력해 주세요.', 'error');
+                return;
+            }
+            if (categories.includes(val)) {
+                showToast('이미 존재하는 카테고리입니다.', 'error');
+                return;
+            }
+            
+            categories.push(val);
+            input.value = '';
+            saveState();
+            updateCategoryDropdowns();
+            renderCategoriesBadgeList();
+            showToast(`새 카테고리 '${val}'가 추가되었습니다.`);
+        });
+
+        $('#new-category-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                $('#add-category-btn').click();
+            }
+        });
+
+        // --- Core Form Event Listeners ---
+        $('#todo-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = $('#todo-input').value.trim();
+            const category = $('#category-select').value;
+            const priority = $('#priority-select').value;
+            const dueDate = $('#date-input').value;
+
+            if (!text) return;
+
+            createTodo(text, category, priority, dueDate);
+            
+            // Clear inputs
+            $('#todo-input').value = '';
+            $('#date-input').value = '';
+        });
+
+        // Search action
+        $('#search-input').addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value;
+            renderTodos();
+        });
+
+        // Tab Filter events
+        $$('.filter-tab').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active styling
+                $$('.filter-tab').forEach(b => {
+                    b.className = 'filter-tab px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition';
+                });
+                
+                // Set active style
+                btn.className = 'filter-tab px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-500 text-white shadow-sm transition';
+                
+                currentFilter = btn.dataset.filter;
+                renderTodos();
+            });
+        });
+
+        // Master App Data Reset
+        $('#reset-app').addEventListener('click', () => {
+            if (confirm('정말로 모든 일정 데이터와 설정을 리셋하시겠습니까?\n(원래 기본 샘플로 교체됩니다)')) {
+                localStorage.removeItem('taskflow_todos');
+                localStorage.removeItem('taskflow_categories');
+                localStorage.removeItem('taskflow_theme');
+                location.reload();
+            }
+        });
+
+        // --- Initialization ---
+        window.onload = function() {
+            initTheme();
+            updateCategoryDropdowns();
+            renderCategoriesBadgeList();
+            updateDashboard();
+            renderTodos();
+        };
+    </script>
+</body>
+</html>
